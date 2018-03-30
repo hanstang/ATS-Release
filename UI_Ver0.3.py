@@ -8,7 +8,7 @@ import urllib3
 import os
 import serial.tools.list_ports
 import socket
-from tkinter import filedialog
+from tkinter import filedialog, Menu
 
 class operationTask(threading.Thread):
 	operation_status="stop" #"run" and "stop"
@@ -112,7 +112,15 @@ class GuiPart:
 		self.window = parent
 		
 		##########################################Menu Bar##########################################
+		menubar = Menu(window)
 		
+		fileMenu = Menu(menubar, tearoff=0)
+		fileMenu.add_command(label="Save",command=self.btnSaveCommand)
+		fileMenu.add_command(label="Open/Load",command=self.btnLoadCommand)
+		fileMenu.add_separator()
+		fileMenu.add_command(label="Exit", command=window.quit)
+		
+		menubar.add_cascade(label="File", menu=fileMenu)
 		############################################################################################
 		
 		##########################################Remote Control####################################
@@ -196,10 +204,14 @@ class GuiPart:
 		self.frame_delay = Tkinter.Frame(window)
 		self.lab_delay = Tkinter.Label(self.frame_delay, text ="Delay").grid(row=0,column=0)
         
-		self.sbox_delay = Tkinter.Spinbox(self.frame_delay, width=10, from_=0, to=100000)
+		self.delayValue = Tkinter.StringVar()
+		self.delayValue.set(1)
+		
+		self.sbox_delay = Tkinter.Spinbox(self.frame_delay, width=10, from_=1, to=100000, textvariable=self.delayValue)
 		self.sbox_delay.grid(row=1,column=0,padx=5,pady=5)
+		
 		self.lab_second = Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=1,column=1)
-		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmit).grid(row=1,column=2,padx=5,pady=5)
+		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelay).grid(row=1,column=2,padx=5,pady=5)
 		############################################################################################
 		
 		##################################Serial Port Setting#######################################
@@ -283,6 +295,7 @@ class GuiPart:
 		#self.frame_rpc_server.grid(row=5,column=0, sticky="NW")
 		#self.frame_STB_LOG.grid(row=5,column=1, sticky="NW")	
 		#self.frame_log.grid(row=3,column=0,sticky="wn", columnspan=2)
+		window.config(menu=menubar)
 		############################################################################################
 		
 		########################################INITIATE############################################
@@ -374,8 +387,8 @@ class GuiPart:
 		#add command to variable
 		self.command_list.append("h")
 
-	def btnSubmit(self):
-		delayTime=self.sbox_delay.get()
+	def btnSubmitDelay(self):
+		delayTime=self.delayValue.get()
 		if delayTime.isdigit():
 			if int(delayTime) > 0:
 				#add to listbox_command
@@ -520,9 +533,65 @@ class GuiPart:
 		#disable button which necessary
 		self.btn_stop.config(state="disable")
 	############################################################################################
+	
+	##########################################Menu FUNCTION#####################################
+	def btnSaveCommand(self):
+		f = filedialog.asksaveasfile(mode='w', defaultextension=".trzats")
+		if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
+			print ("Save Cancel")
+			return
+		else:
+			#write the file
+			for command in self.command_list:
+				f.write(command)
+				f.write("\n")
+			f.close() 
+			print ("Save Success")
 
-
+	def btnLoadCommand(self):
+		filePath = filedialog.askopenfile(mode='rt', filetypes=(("Template files", "*.trzats"),("All files", "*.*")))
+		if filePath is None: # askopenfilename return `None` if dialog closed with "cancel".
+			print ("Load Cancel")
+		else:
+			self.btnClear()
+			#read file
+			with filePath as f:
+				line=f.readlines()
+				line = [x.strip() for x in line]
+			f.close()
+			#process to command
+			for command in line:
+				self.stringToCommand(command)
+			print("Load Success")
 		
+	def stringToCommand(self,cmd):
+		if cmd=="u":
+			self.btnUP()
+		if cmd=="d":
+			self.btnDown()
+		if cmd=="l":
+			self.btnLeft()
+		if cmd=="r":
+			self.btnRight()
+		if cmd=="o":
+			self.btnOK()
+		if cmd=="p":
+			self.btnPower()
+		if cmd=="m":
+			self.btnMenu()
+		if cmd=="h":
+			self.btnHome()
+		if cmd=="n":
+			self.btnACon()
+		if cmd=="f":
+			self.btnACoff()
+		if cmd=="cap":
+			self.btnCapture()
+		if cmd.isdigit():
+			self.delayValue.set(int(cmd))
+			self.btnSubmitDelay()
+	############################################################################################
+	
 window = Tkinter.Tk()
 window.title("Tranzas STB Automation Test Ver 0.3")
 main_ui=GuiPart(window)
