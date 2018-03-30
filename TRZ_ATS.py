@@ -549,7 +549,7 @@ class GuiPart:
 			print ("Save Success")
 
 	def btnLoadCommand(self):
-		filePath = filedialog.askopenfile(mode='rt', filetypes=(("Template files", "*.trzats"),("All files", "*.*")))
+		filePath = filedialog.askopenfile(mode='rt', filetypes=(("Tranzas ATS File", "*.trzats"),("All files", "*.*")))
 		if filePath is None: # askopenfilename return `None` if dialog closed with "cancel".
 			print ("Load Cancel")
 		else:
