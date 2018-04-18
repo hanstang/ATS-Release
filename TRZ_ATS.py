@@ -23,35 +23,69 @@ class operationTask(threading.Thread):
 		
 	def run(self):
 		counter_loop=1
+		os.system('cls' if os.name == 'nt' else 'clear')
 		while self.operation_status=="run":
 			print("Cycle : " + str(counter_loop))
 			print("Time  : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 			print("===================================================")
 			
 			for command in self.command_list:
-				if self.operation_status=="stop":
-					print("=====Stop=======")
-					break
 				if command.isdigit(): #Delay
 					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Waiting for "+command+" Second(s)")
-					time.sleep(int(command))
-				elif command=="cap": #capture 
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.capturingMonitor(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
-					time.sleep(int(1))
-				elif command[:2]=="DR":
+					
+					#looping for timer and check is stop button pushed
+					ctr_time=0
+					while True:
+						ctr_time+=1
+						time.sleep(1)
+						if ctr_time >= int(command) or self.operation_status=="stop":
+							break
+					#time.sleep(int(command))
+				elif command[:2]=="DR": #Delay Random
 					proCMD=command.split(",")
 					delayTime=random.randint(int(proCMD[1]),int(proCMD[2]))
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Waiting Random from " + str(proCMD[1]) + " to " + str(proCMD[2]) + " for "+ str(delayTime) +" Second(s)")
-					time.sleep(int(delayTime))
-				else: #arduino command
-					self.ser.write(command.encode('utf-8'))
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
+					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Random Waiting from " + str(proCMD[1]) + " to " + str(proCMD[2]) + " for "+ str(delayTime) +" Second(s)")
+					
+					#looping for timer and check is stop button pushed
+					ctr_time=0
+					while True:
+						ctr_time+=1
+						time.sleep(1)
+						if ctr_time >= int(delayTime) or self.operation_status=="stop":
+							break
+					#time.sleep(int(delayTime))
+					
+				elif command=="cap": #Capture 
+					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.capturingMonitor(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
 					time.sleep(int(1))
-			
+				else: #Arduino command
+					self.ser.write(command.encode('utf-8'))
+					
+					ctr_try=0
+					while True:
+						ctr_try+=1
+						rv=self.ser.readline()
+						#print (rv.decode("utf-8"))
+						self.ser.flushInput()
+						if self.chekerArduinoReturn(rv,command):
+							print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
+							break
+						else:
+							time.sleep(int(1))
+							print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command) + " Failed (" + str(ctr_try) + ")")
+							if ctr_try < 3:
+								self.ser.write(command.encode('utf-8'))
+							else: 
+								break
+					time.sleep(int(1))
+					
+				if self.operation_status=="stop":
+					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +"Button Stop Pushed!!!!!!!!!!")
+					break
 			print("===================================================")
-			if (counter_loop >= int(self.cycles)) :
-				print("Has been stopped, please push stop button")
-				break
+			if counter_loop >= int(self.cycles) and self.operation_status=="run":
+				self.operation_status="stop"
+				print("*************************Cycles Has been Finished*************************")
 			counter_loop+=1
 			
 	def readCommandCode(self,cmd):
@@ -99,6 +133,29 @@ class operationTask(threading.Thread):
 		except urllib3.exceptions.HTTPError:
 			return "Capture Failed: Server Not Found"
 	
+	def chekerArduinoReturn(self, input, command):
+		if input.decode("utf-8")[:2] == "Up" and command == "u":
+			return True
+		if input.decode("utf-8")[:4] == "Down" and command == "d":
+			return True
+		if input.decode("utf-8")[:4] == "Left" and command == "l":
+			return True
+		if input.decode("utf-8")[:5] == "Right" and command == "r":
+			return True
+		if input.decode("utf-8")[:2] == "OK" and command == "o":
+			return True
+		if input.decode("utf-8")[:5] == "power" and command == "p":
+			return True
+		if input.decode("utf-8")[:4] == "menu" and command == "m":
+			return True
+		if input.decode("utf-8")[:4] == "home" and command == "h":
+			return True
+		if input.decode("utf-8")[:5] == "AC ON" and command == "n":
+			return True
+		if input.decode("utf-8")[:6] == "AC Off" and command == "f":
+			return True
+		return False
+		
 	def printAndLog(self,text,url):
 		#print on cmd
 		print (text)
@@ -199,12 +256,6 @@ class GuiPart:
 
 		self.btn_stop.config(state="disabled") #disabled and normal
 		############################################################################################
-		
-		
-		#######################################LOG##################################################
-		self.frame_log = Tkinter.Frame(window)
-		self.lab_log= Tkinter.Label(self.frame_log, text ="Log").grid(row=0,column=0)
-		############################################################################################
 
 		#########################################Delay##############################################
 		self.frame_delay = Tkinter.Frame(window)
@@ -283,36 +334,6 @@ class GuiPart:
 		self.btn_dir.grid(row=2,column=3,padx=5,pady=5)
 		############################################################################################
 		
-		###################################RPC SERVER###############################################
-		self.frame_rpc_server = Tkinter.Frame(window)
-		self.rpc_server = Tkinter.Label(self.frame_rpc_server, text ="RPC SERVER").grid(row=0,column=0)
-		
-		self.lab_ipserver = Tkinter.Label(self.frame_rpc_server, text = "IP RPC SERVER: ").grid(row=1,column=0)
-		
-		self.ipserver = Tkinter.StringVar()
-		self.ipserver.set("http://192.168.15.223")
-		self.tbox_ipserver = Tkinter.Entry(self.frame_rpc_server, textvariable = self.ipserver, width=50)
-		self.tbox_ipserver.grid(row=1,column=1,padx=5,pady=5)
-		
-		self.btn_1 = Tkinter.Button(self.frame_rpc_server, text ="?????", width=10, command=self.btnResetArduino)
-		self.btn_1.grid(row=1,column=2,padx=5,pady=5)
-		############################################################################################
-		
-		###################################STB LOG##################################################
-		self.frame_STB_LOG = Tkinter.Frame(window)
-		self.STB_LOG = Tkinter.Label(self.frame_STB_LOG, text ="STB LOG").grid(row=0,column=0)
-		
-		self.lab_ipSTB = Tkinter.Label(self.frame_STB_LOG, text = "IP STB: ").grid(row=1,column=0)
-		
-		self.ipSTB = Tkinter.StringVar()
-		self.ipSTB.set("http://192.168.15.223")
-		self.tbox_ipSTB = Tkinter.Entry(self.frame_STB_LOG, textvariable = self.ipSTB, width=50)
-		self.tbox_ipSTB.grid(row=1,column=1,padx=5,pady=5)
-		
-		self.btn_2 = Tkinter.Button(self.frame_STB_LOG, text ="?????", width=10, command=self.btnResetArduino)
-		self.btn_2.grid(row=1,column=2,padx=5,pady=5)
-		############################################################################################
-		
 		##########################################Grid##############################################
 		self.frame_serial.grid(row=0,column=0, sticky="NW")
 		self.frame_remote.grid(row=1,column=0, sticky="NW")
@@ -320,9 +341,6 @@ class GuiPart:
 		self.frame_AC.grid(row=3,column=0, sticky="NW")
 		self.frame_camera.grid(row=4,column=0, sticky="NW", columnspan=2)
 		self.frame_command.grid(row=0,column=1, sticky="NW", rowspan=2)
-		#self.frame_rpc_server.grid(row=5,column=0, sticky="NW")
-		#self.frame_STB_LOG.grid(row=5,column=1, sticky="NW")	
-		#self.frame_log.grid(row=3,column=0,sticky="wn", columnspan=2)
 		window.config(menu=menubar)
 		############################################################################################
 		
@@ -508,12 +526,15 @@ class GuiPart:
 		self.dirValue.set(window.directory)
 		
 	def btnSubmitDelayRandom(self):
-		#add to listbox_command
-		self.listbox_command.insert(self.ctr_command,"Delay Random from " + str(self.delayValueMin.get()) + " to " + str(self.delayValueMax.get()))
-		self.listbox_command.yview(self.ctr_command)
-		self.ctr_command+=1
-		#add command to variable
-		self.command_list.append("DR,"+str(self.delayValueMin.get())+","+str(self.delayValueMax.get()))
+		if int(self.delayValueMin.get()) < int(self.delayValueMax.get()) :
+			#add to listbox_command
+			self.listbox_command.insert(self.ctr_command,"Delay Random from " + str(self.delayValueMin.get()) + " to " + str(self.delayValueMax.get()))
+			self.listbox_command.yview(self.ctr_command)
+			self.ctr_command+=1
+			#add command to variable
+			self.command_list.append("DR,"+str(self.delayValueMin.get())+","+str(self.delayValueMax.get()))
+		else:
+			tkm.showerror("Error", "Maximum Value Must be Greater than Minimum Value")
 	############################################################################################
 
 	############################################UI FUNCTION#####################################
@@ -636,6 +657,15 @@ class GuiPart:
 window = Tkinter.Tk()
 window.title("Tranzas STB Automation Test Ver 0.4")
 main_ui=GuiPart(window)
+
+#update ui if operation finish
+def update_ui():
+	if main_ui.operationTask != "":
+		if main_ui.operationTask.operation_status=="stop":
+			main_ui.btnStop()
+	window.after(1000,update_ui)
+
+window.after(1,update_ui)
 window.mainloop()
 
 
