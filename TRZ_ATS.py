@@ -8,6 +8,7 @@ import urllib3
 import os
 import serial.tools.list_ports
 import socket
+import random
 from tkinter import filedialog, Menu
 
 class operationTask(threading.Thread):
@@ -37,6 +38,11 @@ class operationTask(threading.Thread):
 				elif command=="cap": #capture 
 					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.capturingMonitor(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
 					time.sleep(int(1))
+				elif command[:2]=="DR":
+					proCMD=command.split(",")
+					delayTime=random.randint(int(proCMD[1]),int(proCMD[2]))
+					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Waiting Random from " + str(proCMD[1]) + " to " + str(proCMD[2]) + " for "+ str(delayTime) +" Second(s)")
+					time.sleep(int(delayTime))
 				else: #arduino command
 					self.ser.write(command.encode('utf-8'))
 					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
@@ -212,6 +218,28 @@ class GuiPart:
 		
 		self.lab_second = Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=1,column=1)
 		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelay).grid(row=1,column=2,padx=5,pady=5)
+		
+			###########################random delay#################################
+		
+		self.lab_random_delay = Tkinter.Label(self.frame_delay, text ="Random Delay").grid(row=2,column=0)
+		
+		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Minimum").grid(row=3,column=0)
+		
+		self.delayValueMin = Tkinter.StringVar()
+		self.delayValueMin.set(1)
+		self.sbox_delay_min = Tkinter.Spinbox(self.frame_delay, width=8, from_=1, to=100000, textvariable=self.delayValueMin)
+		self.sbox_delay_min.grid(row=3,column=1,padx=5,pady=5)
+		Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=3,column=2)
+		
+		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Maximum").grid(row=3,column=3)
+		
+		self.delayValueMax = Tkinter.StringVar()
+		self.delayValueMax.set(10)
+		self.sbox_delay_max = Tkinter.Spinbox(self.frame_delay, width=8, from_=2, to=100000, textvariable=self.delayValueMax)
+		self.sbox_delay_max.grid(row=3,column=4,padx=5,pady=5)
+		Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=3,column=5)
+		
+		self.btn_submit_random = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelayRandom).grid(row=3,column=6,padx=5,pady=5)
 		############################################################################################
 		
 		##################################Serial Port Setting#######################################
@@ -478,6 +506,14 @@ class GuiPart:
 	def btnDirectory(self):
 		window.directory = filedialog.askdirectory()
 		self.dirValue.set(window.directory)
+		
+	def btnSubmitDelayRandom(self):
+		#add to listbox_command
+		self.listbox_command.insert(self.ctr_command,"Delay Random from " + str(self.delayValueMin.get()) + " to " + str(self.delayValueMax.get()))
+		self.listbox_command.yview(self.ctr_command)
+		self.ctr_command+=1
+		#add command to variable
+		self.command_list.append("DR,"+str(self.delayValueMin.get())+","+str(self.delayValueMax.get()))
 	############################################################################################
 
 	############################################UI FUNCTION#####################################
@@ -556,7 +592,7 @@ class GuiPart:
 			self.btnClear()
 			#read file
 			with filePath as f:
-				line=f.readlines()
+				line = f.readlines()
 				line = [x.strip() for x in line]
 			f.close()
 			#process to command
@@ -590,9 +626,17 @@ class GuiPart:
 		if cmd.isdigit():
 			self.delayValue.set(int(cmd))
 			self.btnSubmitDelay()
+		if cmd[:2]=="DR":
+			proCMD=cmd.split(",")
+			self.delayValueMin.set(int(proCMD[1]))
+			self.delayValueMax.set(int(proCMD[2]))
+			self.btnSubmitDelayRandom()
 	############################################################################################
 	
 window = Tkinter.Tk()
-window.title("Tranzas STB Automation Test Ver 0.3")
+window.title("Tranzas STB Automation Test Ver 0.4")
 main_ui=GuiPart(window)
 window.mainloop()
+
+
+text=input("press enter key to exit")
