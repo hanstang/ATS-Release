@@ -270,8 +270,9 @@ class GuiPart:
 		self.lab_second = Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=1,column=1)
 		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelay).grid(row=1,column=2,padx=5,pady=5)
 		
-			###########################random delay#################################
+		############################################################################################
 		
+		###################################random delay#############################################
 		self.lab_random_delay = Tkinter.Label(self.frame_delay, text ="Random Delay").grid(row=2,column=0)
 		
 		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Minimum").grid(row=3,column=0)
@@ -520,6 +521,9 @@ class GuiPart:
 		
 	def btnResetArduino(self):
 		self.ser.write("f".encode('utf-8'))
+		rv=self.ser.readline()
+		#print (rv.decode("utf-8"))
+		self.ser.flushInput()
 		
 	def btnDirectory(self):
 		window.directory = filedialog.askdirectory()
