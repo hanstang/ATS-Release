@@ -13,6 +13,7 @@ from tkinter import filedialog, Menu
 
 class operationTask(threading.Thread):
 	operation_status="stop" #"run" and "stop"
+	log_file_name=""
 	def __init__(self, listCmd, serial, yawcamURL, captureDir, cycles):
 		threading.Thread.__init__(self)
 		self.command_list = listCmd
@@ -20,18 +21,19 @@ class operationTask(threading.Thread):
 		self.yawcamURL = yawcamURL.get()
 		self.captureDir = captureDir.get()
 		self.cycles = cycles
+		self.log_file_name=datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 		
 	def run(self):
 		counter_loop=1
 		os.system('cls' if os.name == 'nt' else 'clear')
 		while self.operation_status=="run":
-			print("Cycle : " + str(counter_loop))
-			print("Time  : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-			print("===================================================")
+			self.printAndLog("Cycle : " + str(counter_loop))
+			self.printAndLog("Time  : " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+			self.printAndLog("===================================================")
 			
 			for command in self.command_list:
 				if command.isdigit(): #Delay
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Waiting for "+command+" Second(s)")
+					self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Waiting for "+command+" Second(s)")
 					
 					#looping for timer and check is stop button pushed
 					ctr_time=0
@@ -44,7 +46,7 @@ class operationTask(threading.Thread):
 				elif command[:2]=="DR": #Delay Random
 					proCMD=command.split(",")
 					delayTime=random.randint(int(proCMD[1]),int(proCMD[2]))
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Random Waiting from " + str(proCMD[1]) + " to " + str(proCMD[2]) + " for "+ str(delayTime) +" Second(s)")
+					self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" : Random Waiting from " + str(proCMD[1]) + " to " + str(proCMD[2]) + " for "+ str(delayTime) +" Second(s)")
 					
 					#looping for timer and check is stop button pushed
 					ctr_time=0
@@ -56,7 +58,7 @@ class operationTask(threading.Thread):
 					#time.sleep(int(delayTime))
 					
 				elif command=="cap": #Capture 
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.capturingMonitor(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
+					self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.capturingMonitor(datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
 					time.sleep(int(1))
 				else: #Arduino command
 					self.ser.write(command.encode('utf-8'))
@@ -68,11 +70,11 @@ class operationTask(threading.Thread):
 						#print (rv.decode("utf-8"))
 						self.ser.flushInput()
 						if self.chekerArduinoReturn(rv,command):
-							print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
+							self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
 							break
 						else:
 							time.sleep(int(1))
-							print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command) + " Failed (" + str(ctr_try) + ")")
+							self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command) + " Failed (" + str(ctr_try) + ")")
 							if ctr_try < 3:
 								self.ser.write(command.encode('utf-8'))
 							else: 
@@ -80,12 +82,12 @@ class operationTask(threading.Thread):
 					time.sleep(int(1))
 					
 				if self.operation_status=="stop":
-					print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +"Button Stop Pushed!!!!!!!!!!")
+					self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +"Button Stop Pushed!!!!!!!!!!")
 					break
-			print("===================================================")
+			self.printAndLog("===================================================")
 			if counter_loop >= int(self.cycles) and self.operation_status=="run":
 				self.operation_status="stop"
-				print("*************************Cycles Has been Finished*************************")
+				self.printAndLog("*************************Cycles Has been Finished*************************")
 			counter_loop+=1
 			
 	def readCommandCode(self,cmd):
@@ -156,12 +158,15 @@ class operationTask(threading.Thread):
 			return True
 		return False
 		
-	def printAndLog(self,text,url):
+	def printAndLog(self,text):
 		#print on cmd
 		print (text)
 		#put on notepad
-		f = open(url,"a")
-		f.write(text)
+		if not os.path.exists(self.captureDir):
+			os.makedirs(self.captureDir)
+			
+		f = open(self.captureDir+"/ATS_LOG_"+self.log_file_name+".txt","a+")
+		f.write(text + "\n")
 		f.close
 		
 		
@@ -324,7 +329,7 @@ class GuiPart:
 		self.btn_capture = Tkinter.Button(self.frame_camera, text ="Capture", width=10, command=self.btnCapture)
 		self.btn_capture.grid(row=1,column=3,padx=5,pady=5)
 		
-		self.lab_dir = Tkinter.Label(self.frame_camera, text = "Captured Directory: ").grid(row=2,column=0)
+		self.lab_dir = Tkinter.Label(self.frame_camera, text = "Captured & Log Directory: ").grid(row=2,column=0)
 		
 		self.dirValue = Tkinter.StringVar()
 		self.dirValue.set("./capture/")
@@ -500,7 +505,7 @@ class GuiPart:
 	def btnConnect(self):
 		try:
 			self.port=self.serialValue.get()
-			self.ser = serial.Serial(self.port[:4], 9600, timeout=2) # Establish the connection on a specific port
+			self.ser = serial.Serial(self.port[:5].replace(" ",""), 9600, timeout=2) # Establish the connection on a specific port
 			if self.ConnectArduinoSerial(self.ser) :
 				print("success")
 				self.STOP_UI()
