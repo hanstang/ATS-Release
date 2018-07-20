@@ -24,6 +24,8 @@ class operationTask(threading.Thread):
 		self.log_file_name=datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 		
 	def run(self):
+		self.ser.flushInput() #clear all content in serial port
+		self.ser.flushOutput() #clear all content in serial port
 		counter_loop=1
 		os.system('cls' if os.name == 'nt' else 'clear')
 		while self.operation_status=="run":
@@ -62,7 +64,7 @@ class operationTask(threading.Thread):
 					time.sleep(int(1))
 				else: #Arduino command
 					self.ser.write(command.encode('utf-8'))
-					
+					time.sleep(int(1))
 					ctr_try=0
 					while True:
 						ctr_try+=1
@@ -73,10 +75,10 @@ class operationTask(threading.Thread):
 							self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command))
 							break
 						else:
-							time.sleep(int(1))
 							self.printAndLog(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+ " : " +self.readCommandCode(command) + " Failed (" + str(ctr_try) + ")")
 							if ctr_try < 3:
 								self.ser.write(command.encode('utf-8'))
+								time.sleep(int(1))
 							else: 
 								break
 					time.sleep(int(1))
@@ -111,6 +113,14 @@ class operationTask(threading.Thread):
 			return "Turn AC ON"
 		if cmd=="f":
 			return "Turn AC OFF"
+		if cmd=="a":
+			return "FFwd button pushed"
+		if cmd=="b":
+			return "Rewind button pushed"
+		if cmd=="c":
+			return "Play/Pause button pushed"
+		if cmd=="e":
+			return "Stop button pushed"
 		return "Unknown Code"
 	
 	def capturingMonitor(self,name):
@@ -136,6 +146,7 @@ class operationTask(threading.Thread):
 			return "Capture Failed: Server Not Found"
 	
 	def chekerArduinoReturn(self, input, command):
+		#print(input.decode("utf-8"))
 		if input.decode("utf-8")[:2] == "Up" and command == "u":
 			return True
 		if input.decode("utf-8")[:4] == "Down" and command == "d":
@@ -155,6 +166,14 @@ class operationTask(threading.Thread):
 		if input.decode("utf-8")[:5] == "AC ON" and command == "n":
 			return True
 		if input.decode("utf-8")[:6] == "AC Off" and command == "f":
+			return True
+		if input.decode("utf-8")[:4] == "ffwd" and command == "a":
+			return True
+		if input.decode("utf-8")[:6] == "rewind" and command == "b":
+			return True
+		if input.decode("utf-8")[:9] == "playpause" and command == "c":
+			return True
+		if input.decode("utf-8")[:4] == "stop" and command == "e":
 			return True
 		return False
 		
@@ -192,116 +211,131 @@ class GuiPart:
 		############################################################################################
 		
 		##########################################Remote Control####################################
-		self.frame_remote = Tkinter.Frame(window)
-		self.lab_remote = Tkinter.Label(self.frame_remote, text ="Remote Control").grid(row=0,column=0)
+		self.frame_remote = Tkinter.LabelFrame(window, text="Remote Control", bg="#5F7CBD")
+		#self.lab_remote = Tkinter.Label(self.frame_remote, text ="Remote Control").grid(row=0,column=0,sticky="NW")
         
-		self.btn_up = Tkinter.Button(self.frame_remote, text ="up", width=10, command=self.btnUP)
-		self.btn_up.grid(row=1,column=1,padx=5,pady=5)
+		self.btn_up = Tkinter.Button(self.frame_remote, text ="Up", width=8, command=self.btnUP, bg="#BD6F5F")
+		self.btn_up.grid(row=1,column=1,padx=5,pady=5,sticky="NW")
         
-		self.btn_down = Tkinter.Button(self.frame_remote, text = "down", width=10, command=self.btnDown)
-		self.btn_down.grid(row=3,column=1,padx=5,pady=5)
+		self.btn_down = Tkinter.Button(self.frame_remote, text = "Down", width=8, command=self.btnDown, bg="#BD6F5F")
+		self.btn_down.grid(row=3,column=1,padx=5,pady=5,sticky="NW")
         
-		self.btn_left = Tkinter.Button(self.frame_remote, text ="left", width=10, command=self.btnLeft)
-		self.btn_left.grid(row=2,column=0,padx=5,pady=5)
+		self.btn_left = Tkinter.Button(self.frame_remote, text ="Left", width=8, command=self.btnLeft, bg="#BD6F5F")
+		self.btn_left.grid(row=2,column=0,padx=5,pady=5,sticky="NW")
         
-		self.btn_right = Tkinter.Button(self.frame_remote, text ="right", width=10, command=self.btnRight)
-		self.btn_right.grid(row=2,column=2,padx=5,pady=5)
+		self.btn_right = Tkinter.Button(self.frame_remote, text ="Right", width=8, command=self.btnRight, bg="#BD6F5F")
+		self.btn_right.grid(row=2,column=2,padx=5,pady=5,sticky="NW")
         
-		self.btn_ok = Tkinter.Button(self.frame_remote, text ="OK", width=10, command=self.btnOK)
-		self.btn_ok.grid(row=2,column=1,padx=5,pady=5)
+		self.btn_ok = Tkinter.Button(self.frame_remote, text ="OK", width=8, command=self.btnOK)
+		self.btn_ok.grid(row=2,column=1,padx=5,pady=5,sticky="NW")
         
-		self.btn_power = Tkinter.Button(self.frame_remote, text ="power", width=10, command=self.btnPower)
-		self.btn_power.grid(row=1,column=3,padx=5,pady=5)
+		self.btn_power = Tkinter.Button(self.frame_remote, text ="Power", width=8, command=self.btnPower)
+		self.btn_power.grid(row=1,column=3,padx=5,pady=5,sticky="NW")
        
-		self.btn_menu = Tkinter.Button(self.frame_remote, text ="menu", width=10,command=self.btnMenu)
-		self.btn_menu.grid(row=2,column=3,padx=5,pady=5)
+		self.btn_menu = Tkinter.Button(self.frame_remote, text ="Menu", width=8,command=self.btnMenu)
+		self.btn_menu.grid(row=2,column=3,padx=5,pady=5,sticky="NW")
        
-		self.btn_home = Tkinter.Button(self.frame_remote, text = "home", width=10,command=self.btnHome)
-		self.btn_home.grid(row=3,column=3,padx=5, pady=5)
+		self.btn_home = Tkinter.Button(self.frame_remote, text = "Home", width=8,command=self.btnHome)
+		self.btn_home.grid(row=3,column=3,padx=5, pady=5,sticky="NW")
+		
+		self.btn_forward = Tkinter.Button(self.frame_remote, text = "FFwd", width=8 , bg="#BDB0AA", command=self.btnFFwd)
+		self.btn_forward.grid(row=1,column=2,padx=5, pady=5, sticky="NW")
+		
+		self.btn_rewind = Tkinter.Button(self.frame_remote, text = "Rewind", width=8 , bg="#BDB0AA", command=self.btnRewind)
+		self.btn_rewind.grid(row=1,column=0,padx=5, pady=5, sticky="NW")
+		
+		self.btn_playPause = Tkinter.Button(self.frame_remote, text = "Play/Pause", width=8 , bg="#BDB0AA", command=self.btnPlayPause)
+		self.btn_playPause.grid(row=3,column=0,padx=5, pady=5, sticky="NW")
+		
+		self.btn_stop = Tkinter.Button(self.frame_remote, text = "Stop", width=8 , bg="#BDB0AA", command=self.btnRemoteStop)
+		self.btn_stop.grid(row=3,column=2,padx=5, pady=5, sticky="NW")
 		############################################################################################
 
 		##########################################AC################################################
-		self.frame_AC = Tkinter.Frame(window)
-		self.lab_AC = Tkinter.Label(self.frame_AC, text ="AC").grid(row=0,column=0)
+		self.frame_AC = Tkinter.LabelFrame(window, text ="AC" , bg="#5F7CBD")
+		#self.lab_AC = Tkinter.Label(self.frame_AC, text ="AC").grid(row=0,column=0,sticky="NW")
 
-		self.btn_AC_on = Tkinter.Button(self.frame_AC, text ="on", width=10, command=self.btnACon)
-		self.btn_AC_on.grid(row=1,column=0,padx=5,pady=5)
+		self.btn_AC_on = Tkinter.Button(self.frame_AC, text ="ON", width=10, command=self.btnACon)
+		self.btn_AC_on.grid(row=1,column=0,padx=5,pady=5,sticky="NW")
 
-		self.btn_AC_off = Tkinter.Button(self.frame_AC, text ="off", width=10, command=self.btnACoff)
-		self.btn_AC_off.grid(row=1,column=1,padx=5,pady=5)
+		self.btn_AC_off = Tkinter.Button(self.frame_AC, text ="OFF", width=10, command=self.btnACoff)
+		self.btn_AC_off.grid(row=1,column=1,padx=5,pady=5,sticky="NW")
 		############################################################################################
 
 		#########################################Command############################################
-		self.frame_command = Tkinter.Frame(window)
-		self.lab_command = Tkinter.Label(self.frame_command, text ="Command").grid(row=0,column=0)
+		self.frame_command = Tkinter.LabelFrame(window , text ="Command", bg="#5F7CBD")
+		#self.lab_command = Tkinter.Label(self.frame_command, text ="Command", bg="#5F7CBD").grid(row=0,column=0,sticky="NW")
 
-		self.listbox_command = Tkinter.Listbox(self.frame_command, width=30, height=10)
-		self.listbox_command.grid(row=1,column=0,pady=5, columnspan=2)
+		self.listbox_command = Tkinter.Listbox(self.frame_command, width=30, height=20)
+		self.listbox_command.grid(row=1,column=0,pady=5,padx=(10,0), columnspan=2,sticky="NSEW")
 		
 		self.scrollbar_command = Tkinter.Scrollbar(self.frame_command, command=self.listbox_command.yview)
-		self.scrollbar_command.grid(row=1,column=2)
+		self.scrollbar_command.grid(row=1,column=2,padx=(0,10),pady=5,sticky="NSEW")
 		
 		self.listbox_command.configure(yscrollcommand = self.scrollbar_command.set)
 
-		self.btn_run = Tkinter.Button(self.frame_command, text ="run", width=10, command=self.btnRun)
-		self.btn_run.grid(row=2,column=0,padx=5,pady=5)
+		self.btn_run = Tkinter.Button(self.frame_command, text ="Run", width=10, command=self.btnRun)
+		self.btn_run.grid(row=2,column=0,padx=(10,5),pady=5,sticky="NWE")
 
-		self.btn_stop = Tkinter.Button(self.frame_command, text ="stop", width=10, command=self.btnStop)
-		self.btn_stop.grid(row=2,column=1,padx=5,pady=5)
+		self.btn_stop = Tkinter.Button(self.frame_command, text ="Stop", width=10, command=self.btnStop)
+		self.btn_stop.grid(row=2,column=1,padx=5,pady=5,sticky="NWE")
 
-		self.btn_clear = Tkinter.Button(self.frame_command, text ="clear", width=10, command=self.btnClear)
-		self.btn_clear.grid(row=3,column=0,padx=5,pady=5)
+		self.btn_clear = Tkinter.Button(self.frame_command, text ="Clear", width=10, command=self.btnClear)
+		self.btn_clear.grid(row=3,column=0,padx=(10,5),pady=5,sticky="NWE")
 		
 		self.btn_reset_arduino = Tkinter.Button(self.frame_command, text ="Reset Arduino", width=10, command=self.btnResetArduino)
-		self.btn_reset_arduino.grid(row=3,column=1,padx=5,pady=5)
+		self.btn_reset_arduino.grid(row=3,column=1,padx=5,pady=5,sticky="NWE")
 		
-		self.lab_cycle = Tkinter.Label(self.frame_command, text ="Cycle : ").grid(row=4,column=0)
+		self.lab_cycle = Tkinter.Label(self.frame_command, text ="Cycle : " , bg="#5F7CBD").grid(row=4,column=0,sticky="E")
 		self.sbox_cycle = Tkinter.Spinbox(self.frame_command, width=10, from_=1, to=100000)
-		self.sbox_cycle.grid(row=4,column=1,padx=5,pady=5)
+		self.sbox_cycle.grid(row=4,column=1,padx=5,pady=5,sticky="NW")
 
 		self.btn_stop.config(state="disabled") #disabled and normal
 		############################################################################################
 
 		#########################################Delay##############################################
-		self.frame_delay = Tkinter.Frame(window)
-		self.lab_delay = Tkinter.Label(self.frame_delay, text ="Delay").grid(row=0,column=0)
-        
+		self.frame_delay = Tkinter.LabelFrame(window, text ="Delay" , bg="#5F7CBD")
+		
+		self.lab_fixDelay = Tkinter.Label(self.frame_delay, text ="Fixed Delay", bg="#5F7CBD").grid(row=0,column=0,sticky="NW")
+		
+		self.lab_timeDelay = Tkinter.Label(self.frame_delay, text ="Time : ", bg="#5F7CBD").grid(row=1,column=0,sticky="NSE")
+		
 		self.delayValue = Tkinter.StringVar()
 		self.delayValue.set(1)
 		
 		self.sbox_delay = Tkinter.Spinbox(self.frame_delay, width=10, from_=1, to=100000, textvariable=self.delayValue)
-		self.sbox_delay.grid(row=1,column=0,padx=5,pady=5)
+		self.sbox_delay.grid(row=1,column=1,padx=5,pady=5,sticky="NSW")
 		
-		self.lab_second = Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=1,column=1)
-		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelay).grid(row=1,column=2,padx=5,pady=5)
+		self.lab_second = Tkinter.Label(self.frame_delay, text ="Second(s)" , bg="#5F7CBD").grid(row=1,column=2,sticky="NSEW")
+		self.btn_submit = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelay).grid(row=1,column=3,padx=5,pady=5,sticky="NW")
 		
 		############################################################################################
 		
-		###################################random delay#############################################
-		self.lab_random_delay = Tkinter.Label(self.frame_delay, text ="Random Delay").grid(row=2,column=0)
+		###################################Random Delay#############################################
+		self.lab_random_delay = Tkinter.Label(self.frame_delay, text ="Random Delay" , bg="#5F7CBD").grid(row=2,column=0,sticky="NW")
 		
-		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Minimum").grid(row=3,column=0)
+		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Minimum : " , bg="#5F7CBD").grid(row=3,column=0,sticky="NSE")
 		
 		self.delayValueMin = Tkinter.StringVar()
 		self.delayValueMin.set(1)
-		self.sbox_delay_min = Tkinter.Spinbox(self.frame_delay, width=8, from_=1, to=100000, textvariable=self.delayValueMin)
-		self.sbox_delay_min.grid(row=3,column=1,padx=5,pady=5)
-		Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=3,column=2)
+		self.sbox_delay_min = Tkinter.Spinbox(self.frame_delay, width=10, from_=1, to=100000, textvariable=self.delayValueMin)
+		self.sbox_delay_min.grid(row=3,column=1,padx=5,pady=5,sticky="NSW")
+		Tkinter.Label(self.frame_delay, text ="Second(s)" , bg="#5F7CBD").grid(row=3,column=2,sticky="NSEW")
 		
-		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Maximum").grid(row=3,column=3)
+		self.lab_min_delay = Tkinter.Label(self.frame_delay, text ="Maximum : " , bg="#5F7CBD").grid(row=3,column=3,sticky="NSE")
 		
 		self.delayValueMax = Tkinter.StringVar()
 		self.delayValueMax.set(10)
-		self.sbox_delay_max = Tkinter.Spinbox(self.frame_delay, width=8, from_=2, to=100000, textvariable=self.delayValueMax)
-		self.sbox_delay_max.grid(row=3,column=4,padx=5,pady=5)
-		Tkinter.Label(self.frame_delay, text ="Second(s)").grid(row=3,column=5)
+		self.sbox_delay_max = Tkinter.Spinbox(self.frame_delay, width=10, from_=2, to=100000, textvariable=self.delayValueMax)
+		self.sbox_delay_max.grid(row=3,column=4,padx=5,pady=5,sticky="NSW")
+		Tkinter.Label(self.frame_delay, text ="Second(s)" , bg="#5F7CBD").grid(row=3,column=5,sticky="NSEW")
 		
-		self.btn_submit_random = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelayRandom).grid(row=3,column=6,padx=5,pady=5)
+		self.btn_submit_random = Tkinter.Button(self.frame_delay, text ="Submit", width=10, command=self.btnSubmitDelayRandom).grid(row=3,column=6,padx=5,pady=5,sticky="NW")
 		############################################################################################
 		
 		##################################Serial Port Setting#######################################
-		self.frame_serial = Tkinter.Frame(window)
-		self.lab_serial = Tkinter.Label(self.frame_serial, text ="Serial Port Setting").grid(row=0,column=0)
+		self.frame_serial = Tkinter.LabelFrame(window, text="Serial Port Setting" , bg="#5F7CBD")
+		#self.lab_serial = Tkinter.Label(self.frame_serial, text ="Serial Port Setting").grid(row=0,column=0,sticky="NW")
 		
 		self.ports = list(serial.tools.list_ports.comports())	#get port list
 		
@@ -309,44 +343,45 @@ class GuiPart:
 		self.serialValue.set(self.ports[0])
 		
 		self.oMenu_serial = Tkinter.OptionMenu(self.frame_serial, self.serialValue, *self.ports)
-		self.oMenu_serial.grid(row=1,column=0,padx=5,pady=5)
+		self.oMenu_serial.grid(row=1,column=0,padx=5,pady=5,sticky="NW")
 		
 		self.btn_connect = Tkinter.Button(self.frame_serial, text ="Connect", width=10, command=self.btnConnect)
-		self.btn_connect.grid(row=1,column=1,padx=5,pady=5)
+		self.btn_connect.grid(row=1,column=1,padx=5,pady=5,sticky="NSW")
 		############################################################################################
 		
 		################################Camera######################################################
-		self.frame_camera = Tkinter.Frame(window)
-		self.lab_camera = Tkinter.Label(self.frame_camera, text ="Camera").grid(row=0,column=0)
+		self.frame_camera = Tkinter.LabelFrame(window, text="Camera" , bg="#5F7CBD")
+		#self.lab_camera = Tkinter.Label(self.frame_camera, text ="Camera").grid(row=0,column=0,sticky="NW")
 		
-		self.lab_url = Tkinter.Label(self.frame_camera, text = "URL Yawcam: ").grid(row=1,column=0)
+		self.lab_url = Tkinter.Label(self.frame_camera, text = "URL Yawcam : ", bg="#5F7CBD").grid(row=1,column=0,sticky="NSE")
 		
 		self.urlValue = Tkinter.StringVar()
-		self.urlValue.set("http://"+socket.gethostbyname(socket.gethostname())+":8888/out.jpg")
+		#self.urlValue.set("http://"+socket.gethostbyname(socket.gethostname())+":8888/out.jpg")
+		self.urlValue.set("http://localhost:8888/out.jpg")
 		self.tbox_URL = Tkinter.Entry(self.frame_camera, textvariable = self.urlValue, width=50)
-		self.tbox_URL.grid(row=1,column=2,padx=5,pady=5)
+		self.tbox_URL.grid(row=1,column=2,padx=5,pady=5,sticky="NS")
 		
-		self.btn_capture = Tkinter.Button(self.frame_camera, text ="Capture", width=10, command=self.btnCapture)
-		self.btn_capture.grid(row=1,column=3,padx=5,pady=5)
+		self.btn_capture = Tkinter.Button(self.frame_camera, text ="Capture", width=15, command=self.btnCapture)
+		self.btn_capture.grid(row=1,column=3,padx=5,pady=5,sticky="NW")
 		
-		self.lab_dir = Tkinter.Label(self.frame_camera, text = "Captured & Log Directory: ").grid(row=2,column=0)
+		self.lab_dir = Tkinter.Label(self.frame_camera, text = "Captured & Log Directory : " , bg="#5F7CBD").grid(row=2,column=0,sticky="NSE")
 		
 		self.dirValue = Tkinter.StringVar()
 		self.dirValue.set("./capture/")
 		self.tbox_dir = Tkinter.Entry(self.frame_camera, textvariable = self.dirValue, width=50)
-		self.tbox_dir.grid(row=2,column=2,padx=5,pady=5)
+		self.tbox_dir.grid(row=2,column=2,padx=5,pady=5,sticky="NS")
 		
 		self.btn_dir = Tkinter.Button(self.frame_camera, text ="Change Directory", width=15, command=self.btnDirectory)
-		self.btn_dir.grid(row=2,column=3,padx=5,pady=5)
+		self.btn_dir.grid(row=2,column=3,padx=5,pady=5,sticky="NW")
 		############################################################################################
 		
 		##########################################Grid##############################################
-		self.frame_serial.grid(row=0,column=0, sticky="NW")
-		self.frame_remote.grid(row=1,column=0, sticky="NW")
-		self.frame_delay.grid(row=2,column=0,sticky="NW")
-		self.frame_AC.grid(row=3,column=0, sticky="NW")
-		self.frame_camera.grid(row=4,column=0, sticky="NW", columnspan=2)
-		self.frame_command.grid(row=0,column=1, sticky="NW", rowspan=2)
+		self.frame_serial.grid(row=0,column=0, sticky="NSEW",padx=20,pady=10)
+		self.frame_remote.grid(row=1,column=0, sticky="NSEW",padx=20,pady=10)
+		self.frame_delay.grid(row=2,column=0,sticky="NSEW",padx=20,pady=10)
+		self.frame_AC.grid(row=3,column=0, sticky="NSEW",padx=20,pady=10)
+		self.frame_camera.grid(row=4,column=0, sticky="NSEW",padx=20,pady=10)
+		self.frame_command.grid(row=0,column=1, sticky="NW", rowspan=4,padx=20,pady=10,)
 		window.config(menu=menubar)
 		############################################################################################
 		
@@ -513,8 +548,8 @@ class GuiPart:
 				self.oMenu_serial.config(state="disabled")
 			else:
 				print("fail")
-		except serial.SerialException:
-			print ("Port not Found")
+		except serial.SerialException as e:
+			print ("Port Error: " + str(e))
 	
 	def btnCapture(self):
 		#add to listbox_command
@@ -544,6 +579,39 @@ class GuiPart:
 			self.command_list.append("DR,"+str(self.delayValueMin.get())+","+str(self.delayValueMax.get()))
 		else:
 			tkm.showerror("Error", "Maximum Value Must be Greater than Minimum Value")
+	
+	def btnFFwd(self):
+		#add to listbox_command
+		self.listbox_command.insert(self.ctr_command,"Push FFwd Button")
+		self.listbox_command.yview(self.ctr_command)
+		self.ctr_command+=1
+		#add command to variable
+		self.command_list.append("a")
+		
+	def btnRewind(self):
+		#add to listbox_command
+		self.listbox_command.insert(self.ctr_command,"Push Rewind Button")
+		self.listbox_command.yview(self.ctr_command)
+		self.ctr_command+=1
+		#add command to variable
+		self.command_list.append("b")
+		
+	def btnPlayPause(self):
+		#add to listbox_command
+		self.listbox_command.insert(self.ctr_command,"Push Play/Pause Button")
+		self.listbox_command.yview(self.ctr_command)
+		self.ctr_command+=1
+		#add command to variable
+		self.command_list.append("c")
+	
+	def btnRemoteStop(self):
+		#add to listbox_command
+		self.listbox_command.insert(self.ctr_command,"Push Stop Button")
+		self.listbox_command.yview(self.ctr_command)
+		self.ctr_command+=1
+		#add command to variable
+		self.command_list.append("e")
+	
 	############################################################################################
 
 	############################################UI FUNCTION#####################################
@@ -661,10 +729,19 @@ class GuiPart:
 			self.delayValueMin.set(int(proCMD[1]))
 			self.delayValueMax.set(int(proCMD[2]))
 			self.btnSubmitDelayRandom()
+		if cmd=="a":
+			self.btnFFwd()
+		if cmd=="b":
+			self.btnRewind()
+		if cmd=="c":
+			self.btnPlayPause()
+		if cmd=="e":
+			self.btnRemoteStop()
 	############################################################################################
 	
 window = Tkinter.Tk()
-window.title("Tranzas STB Automation Test Ver 0.4")
+window.title("Tranzas STB Automation Test Ver 0.5")
+window.configure(bg="#5F7CBD")
 main_ui=GuiPart(window)
 
 #update ui if operation finish
