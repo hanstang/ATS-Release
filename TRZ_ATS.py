@@ -376,13 +376,19 @@ class GuiPart:
 		self.btn_dir.grid(row=2,column=3,padx=5,pady=5,sticky="NW")
 		############################################################################################
 		
+		#####################################ADB Screen Capture#####################################
+		self.frame_adbscreen = Tkinter.LabelFrame(window, text="ADB Screen Capture" , bg="#5F7CBD")
+		
+		############################################################################################
+		
 		##########################################Grid##############################################
 		self.frame_serial.grid(row=0,column=0, sticky="NSEW",padx=20,pady=10)
 		self.frame_remote.grid(row=1,column=0, sticky="NSEW",padx=20,pady=10)
 		self.frame_delay.grid(row=2,column=0,sticky="NSEW",padx=20,pady=10)
 		self.frame_AC.grid(row=3,column=0, sticky="NSEW",padx=20,pady=10)
 		self.frame_camera.grid(row=4,column=0, sticky="NSEW",padx=20,pady=10)
-		self.frame_command.grid(row=0,column=1, sticky="NW", rowspan=4,padx=20,pady=10,)
+		self.frame_command.grid(row=0,column=2, sticky="NW", rowspan=4,padx=20,pady=10)
+		self.frame_adbscreen.grid(row=0,column=1, sticky="NW",padx=20,pady=10)
 		window.config(menu=menubar)
 		############################################################################################
 		
