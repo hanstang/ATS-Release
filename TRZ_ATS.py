@@ -10,6 +10,7 @@ import serial.tools.list_ports
 import socket
 import random
 from tkinter import filedialog, Menu
+from adb import ADB
 
 class operationTask(threading.Thread):
 	operation_status="stop" #"run" and "stop"
